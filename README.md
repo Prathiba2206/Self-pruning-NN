@@ -1,5 +1,4 @@
-
-# Self-Pruning Neural Network – Case Study
+# Self-Pruning Neural Network –Case Study
 
 ## 1. Problem Overview
 
@@ -59,27 +58,46 @@ Each `PrunableLinear` has:
 
 This ensures gradients flow through both **weights** and **gates**, and the optimizer can decide which connections to attenuate or prune.
 
-### 2.3 Architecture diagram 
-```mermaid
-flowchart TD
+### 2.3 Architecture diagram (text)
 
-A[Input Image (3x32x32)]
-B[Flatten (3072)]
+Logical view of the network:
 
-C[PrunableLinear (3072 -> 128)<br>weight_1<br>gate_scores_1<br>gates_1 = sigmoid(gate_scores_1)<br>effective_weight_1 = weight_1 * gates_1]
-
-D[ReLU]
-
-E[PrunableLinear (128 -> 64)<br>weight_2<br>gate_scores_2<br>gates_2 = sigmoid(gate_scores_2)<br>effective_weight_2 = weight_2 * gates_2]
-
-F[ReLU]
-
-G[PrunableLinear (64 -> 10)<br>weight_3<br>gate_scores_3<br>gates_3 = sigmoid(gate_scores_3)<br>effective_weight_3 = weight_3 * gates_3]
-
-H[Logits (10 classes)]
-
-A --> B --> C --> D --> E --> F --> G --> H
+```text
+Input (3x32x32 image)
+        |
+        v
+[ Flatten to 3072 ]
+        |
+        v
+PrunableLinear(3072 -> 128)
+  - weight_1
+  - gate_scores_1  --> gates_1 = sigmoid(gate_scores_1)
+  - effective_weight_1 = weight_1 * gates_1
+        |
+        v
+ReLU
+        |
+        v
+PrunableLinear(128 -> 64)
+  - weight_2
+  - gate_scores_2  --> gates_2
+  - effective_weight_2 = weight_2 * gates_2
+        |
+        v
+ReLU
+        |
+        v
+PrunableLinear(64 -> 10)
+  - weight_3
+  - gate_scores_3  --> gates_3
+  - effective_weight_3 = weight_3 * gates_3
+        |
+        v
+Logits (10 classes)
 ```
+
+---
+
 ## 3. Loss Function and Sparsity
 
 ### 3.1 Classification + Sparsity loss
@@ -323,11 +341,3 @@ In summary, I followed the **specified structure** (custom prunable layer, L1 ga
 
 - `README.md`  
   - This document: problem explanation, architecture, training details, and relation to the JD case study.
-```
-
-***
-
-If you want, after you run training once in Colab and get your actual numbers, you can:
-
-- Fill in the table under **Section 6** with real `Test Accuracy` and `Sparsity` values from `results.json`.
-- Add a short 2–3 line “Results & Observations” section, and I can help you phrase it in a very interview‑friendly way.
