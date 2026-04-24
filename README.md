@@ -237,87 +237,35 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 ---
 
-## 6. Outputs and Evaluation Metrics
+## 6.Quantitative Results
 
-The script generates:
+Using a small MLP (128 → 64 → 10) and a limited CIFAR-10 training budget, I ran several
+two-phase configurations of `(lambda_phase1, lambda_phase2)`. The table below reports
+**test accuracy** and **sparsity level (%)** (percentage of gates below a small threshold).
 
-1. **`results/results.json`**
+| Lambda (Phase 1) | Lambda (Phase 2) | Test Accuracy (%) | Sparsity Level (%) |
+|------------------|------------------|-------------------|--------------------|
+| 0.0              | 0.0              | 52.23             | 0.00               |
+| 1e-4             | 1e-4             | 52.03             | 0.00               |
+| 1e-4             | 1e-3             | 52.13             | 0.00               |
+| 1e-4             | 1e-2             | 52.57             | 0.00               |
+| 1e-3             | 1e-3             | 51.41             | 0.00               |
 
-   Contains a list like:
 
-   ```json
-   [
-     {
-       "lambda_phase1": 0.0001,
-       "lambda_phase2": 0.0001,
-       "test_accuracy": ...,
-       "sparsity": ...
-     },
-     {
-       "lambda_phase1": 0.0001,
-       "lambda_phase2": 0.001,
-       "test_accuracy": ...,
-       "sparsity": ...
-     },
-     {
-       "lambda_phase1": 0.0001,
-       "lambda_phase2": 0.01,
-       "test_accuracy": ...,
-       "sparsity": ...
-     }
-   ]
-   ```
+### Results & Observations
 
-   From this I construct the required table:
-
-   | Lambda (Phase 2) | Test Accuracy (%) | Sparsity Level (%) |
-   |------------------|-------------------|--------------------|
-   | 1e-4             | ...               | ...                |
-   | 1e-3             | ...               | ...                |
-   | 1e-2             | ...               | ...                |
-
-   - **Sparsity level** is defined as the **percentage of gates below a small threshold** (e.g., `1e-2`), exactly as described in the case study. [file:1]
-
-2. **`results/gate_distribution.png`**
-
-   - A histogram of all final gate values for the **best-performing model** (highest test accuracy).
-   - In a successful self-pruning setup, the histogram shows:
-     - A **large spike near 0** (pruned connections),
-     - A cluster of values away from 0 (connections that stayed active).
-
----
-
-## 7. How this relates to the JD case study structure
-
-The JD/case study specifies: [file:1]
-
-1. **Custom `PrunableLinear` layer**  
-   - Implemented in `models.py` with `weight`, `bias`, and `gate_scores`.
-   - Forward pass uses `sigmoid(gate_scores)` as gates and multiplies them with the weights.
-
-2. **Sparsity regularization (L1 on gates)**  
-   - `SelfPruningMLP.sparsity_loss()` computes the sum of all gate values across all prunable layers.
-   - Total loss = classification loss + λ × normalized sparsity loss.
-
-3. **Training on CIFAR-10**  
-   - Dataset is loaded via `torchvision.datasets.CIFAR10`, as requested.
-
-4. **Reporting**  
-   - For **at least three λ values**, I report:
-     - Test accuracy,
-     - Sparsity level (% of gates below threshold),
-     - And visualize gate value distribution with a histogram.
-
-5. **Extension beyond the basic structure (two-phase schedule)**  
-   - The case study describes the core mechanism; my implementation adds a simple but practical **two-phase training schedule**:
-     - Phase 1 with small λ (feature learning),
-     - Phase 2 with larger λ (aggressive pruning).
-   - This makes the method closer to real-world pruning workflows and easier to explain:  
-     “First learn, then prune”.
-
-In summary, I followed the **specified structure** (custom prunable layer, L1 gating, CIFAR-10, evaluation across λ), and added a **two-phase λ schedule** as a small, practical enhancement that improves stability and clarity of the sparsity–accuracy trade-off.
-
----
+- The small MLP achieves around **52% test accuracy** on CIFAR‑10 across all runs, which is reasonable given the
+  **simple architecture**, **limited training epochs**, and **subset-based / lightweight setup**.
+- With the current hyperparameters (λ and training length), the **measured sparsity level is 0%**:
+  none of the gates fell below the selected threshold. In other words, the model did not yet push
+  many gates all the way to (numerically) zero.
+- This suggests that, for this particular configuration, the **sparsity pressure is still too weak**
+  (relative to the number of epochs and model size). Increasing λ further, using more epochs,
+  or tightening the sparsity threshold would likely produce a clearer sparsity–accuracy trade‑off.
+- Even in this regime, the architecture and loss formulation correctly implement the **self‑pruning mechanism**:
+  every weight is associated with a gate, gradients flow through gates, and the training code supports
+  varying λ to explore pruning behaviour. The current results highlight how sensitive sparsity is to the
+  **strength and duration** of the regularisation.
 
 ## 8. Files in this repository
 
